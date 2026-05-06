@@ -1,0 +1,78 @@
+
+
+
+-- Fraud Detection Analysis Project
+-- Dataset: Financial Loans Dataset
+-- Tools Used: SQL
+
+--------------------------------------------------
+
+-- 1. Find maximum and minimum loan amount
+SELECT 
+    MAX(loan_amount) AS max_loan_amount,
+    MIN(loan_amount) AS min_loan_amount
+FROM loans;
+
+--------------------------------------------------
+
+-- 2. Identify users who missed payments more than once
+SELECT l.user_id
+FROM loans l 
+INNER JOIN repayment r 
+    ON l.loan_id = r.loan_id
+WHERE r.payment_status = 'missed'
+GROUP BY l.user_id
+HAVING COUNT(*) > 1;
+
+--------------------------------------------------
+
+-- 3. Total loan amount distributed by city
+SELECT 
+    u.city,
+    SUM(l.loan_amount) AS total_loan_amount
+FROM users u
+INNER JOIN loans l 
+    ON u.user_id = l.user_id
+GROUP BY u.city;
+
+--------------------------------------------------
+
+-- 4. Find highest loan amount in each city (using window function)
+SELECT *
+FROM (
+    SELECT 
+        u.user_id,
+        u.city,
+        l.loan_amount,
+        RANK() OVER(PARTITION BY u.city ORDER BY l.loan_amount DESC) AS rank_position
+    FROM users u 
+    INNER JOIN loans l 
+        ON u.user_id = l.user_id
+) t
+WHERE rank_position = 1;
+
+--------------------------------------------------
+
+-- 5. Categorize loans based on status
+SELECT 
+    loan_id,
+    CASE
+        WHEN loan_status = 'paid' THEN 'closed'
+        WHEN loan_status = 'default' THEN 'risky'
+        ELSE 'ongoing'
+    END AS loan_category
+FROM loans;
+
+--------------------------------------------------
+
+-- 6. Calculate total amount paid for each loan
+SELECT 
+    l.loan_id,
+    l.loan_amount,
+    SUM(r.amount_paid) AS total_paid
+FROM loans l
+LEFT JOIN repayment r 
+    ON l.loan_id = r.loan_id
+GROUP BY l.loan_id, l.loan_amount;
+
+--------------------------------------------------
